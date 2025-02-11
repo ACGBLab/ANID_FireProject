@@ -1,0 +1,6 @@
+### Obtain phenophases from time series (Authors: Paula Basualto-Santana and Andrés Plaza-Aguilar)....work in progress
+
+## Load libraries 
+
+library(phenopix)
+library(strucchange)
