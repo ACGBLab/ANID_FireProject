@@ -1,0 +1,42 @@
+## In order to use the points to obtain time series from Sentinel 2, it is necessary covert coodinated to decimal
+# This Script allow to convert the file with UTM coordinate and write a new file with decimal degrees coodinates. 
+
+
+# Load library
+
+library(sf)
+
+# Load UTM coordinates data
+file_path <- "puntos_df.csv"
+utm_data <- read.csv(file_path)
+
+# Inspect the coodinates data
+head(utm_data)
+colnames(utm_data) <- c("Easting","Northing", "Cat")
+names(utm_data)
+# We assume that the file contain columns called 'Easting' and 'Northing', and we know the UTM zone and the hemisphere
+
+# Replace 'zone_number' with the appropiate UTM zone and set the hemisphere (South or North)
+zone_number <- 19  
+hemisphere <- "south" 
+
+# Convert UTM coordinate to sf object
+utm_crs <- paste0("+proj=utm +zone=", zone_number, " +datum=WGS84 +", ifelse(hemisphere == "north", "north", "south"))
+utm_sf <- st_as_sf(utm_data, coords = c("Easting", "Northing"), crs = utm_crs)
+
+# Convert to WGS84 (decimal degrees)
+wgs84_sf <- st_transform(utm_sf, crs = 4326)
+
+# Extraer las coordenadas en grados decimales
+decimal_coords <- st_coordinates(wgs84_sf)
+utm_data$Longitude <- decimal_coords[, 1]
+utm_data$Latitude <- decimal_coords[, 2]
+
+# Save and update data with decimal degree coordinates
+
+output_file <- "converted_coordinates.csv"
+View(output_file)
+write.csv(utm_data, output_file, row.names = FALSE)
+
+
+
