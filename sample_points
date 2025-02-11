@@ -1,0 +1,50 @@
+# This script allow to obtain aleatory points in the area for each fire fuel categories (Authors: Paula Basualto-Santana, Andrés Plaza-Aguilar)
+# In this example 
+
+rm(list=ls())
+# load necessary packages
+library(terra)
+library(dplyr)
+
+getwd()
+
+setwd(".~/set_your_work_directory")
+
+# Load fuel categories raster (provided by Miguel Castillo for Valparíso Region)
+uso_suelo <- rast("region_05/region_05.img")
+
+# Extract unique categories from the raster 
+categorias <- unique(values(uso_suelo))
+categorias_unicas <- unique(categorias[, "Layer_1"])
+
+set.seed(1345) # To keep same aleatory points everty time you run the script.
+
+# Create stratified points 
+puntos <- lapply(categorias_unicas, function(cat) {
+  # Filter cells for each actual category 
+  celdas <- which(values(uso_suelo) == cat)
+  
+  if (length(celdas) == 0) {
+    return(NULL)  # To skipt whether there are o not cells for a category
+  }
+  
+  # Select aleatory points into the cells 
+  n_puntos <- 10 # For this project we used ten points for each fire fuel category 
+  celdas_selec <- sample(celdas, min(n_puntos, length(celdas)))
+  coords <- xyFromCell(uso_suelo, celdas_selec)
+  
+  data.frame(x = coords[, 1], y = coords[, 2], categoria = cat)
+}) 
+
+# Merge all point in only one dataframe
+puntos_df <- do.call(rbind, puntos)
+
+# Plot aleatory points obtained rasterized area 
+plot(uso_suelo)
+points(puntos_df$x, puntos_df$y, col = "red", pch = 16)
+
+# Write and save the obtained points 
+
+write.csv(puntos_df,"puntos_df.csv", row.names = FALSE)
+
+### Note that this is an example for Valparaiso Region. The project include the Central South Region of Chile, so this script have to be run the mentioned area. 
