@@ -1,4 +1,4 @@
-## This script allow to visualise the time series obtained from Sentinel_ts script (Authors: Paula Basualto-Santana and Andrés Plaza-Aguilar, based on Philipp Gärtner Blog)
+## This script allow to visualise the time series obtained from Sentinel_ts script (Authors: Laboratorio de Adaptación Climática y Gestión del Bosque, based on Philipp Gärtner Blog)
 
 ## Load libraries
 library(reticulate)
