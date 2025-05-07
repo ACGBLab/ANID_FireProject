@@ -1,4 +1,4 @@
-# Authors: Paula Basualto-Santana and Andrés Plaza-Aguilar
+# Authors: Laboratorio de Adaptación Climática y Gestión del Bosque
 # This R script allow to obtain Sentinel 2 time series of 4 vegetation indices from aleatory points of fuel categories in decimal degree coordinates
 # The script use Google Earth Engine API in RStudio. Before run the script it is necessary to create a conda environment with earthengine-api and set up your computer 
 
