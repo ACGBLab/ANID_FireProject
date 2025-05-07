@@ -1,4 +1,4 @@
-# This script allow to obtain aleatory points in the area for each fire fuel categories (Authors: Paula Basualto-Santana and Andrés Plaza-Aguilar)
+# This script allow to obtain aleatory points in the area for each fire fuel categories (Authors: Laboratorio de Adaptación Climática y Gestión del Bosque)
 
 
 rm(list=ls())
