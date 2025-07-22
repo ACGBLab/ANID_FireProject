@@ -1,6 +1,146 @@
-### Obtain phenophases from time series (Authors: Laboratorio Adaptación Climática y Gestión del Bosque)....work in progress
+#' @title Script para Procesamiento Fenológico y Detección de Puntos de Quiebre
+#' @author Laboratorio de Adaptación Climática y Gestión del Bosque
+#' @date 2025-07-21
+#' @description Este script carga series de tiempo de índices de vegetación, y para cada punto
+#'              de muestreo e índice, aplica un modelo fenológico y detecta los puntos de
+#'              quiebre (breakpoints) que corresponden a las fases fenológicas clave.
+#' @details
+#' Pasos del script:
+#' 1. Carga las librerías y define las rutas y parámetros.
+#' 2. Carga el archivo de series de tiempo pre-procesado.
+#' 3. Itera sobre cada índice de vegetación y cada punto de muestreo.
+#' 4. Dentro del bucle:
+#'    a. Crea un objeto de serie de tiempo (ts).
+#'    b. Ajusta un modelo de doble logística (Elmore) usando el paquete 'greenbrown'.
+#'    c. Detecta los puntos de quiebre estructurales usando el paquete 'strucchange'.
+#'    d. Extrae y formatea las fechas de las fases fenológicas.
+#' 5. Consolida los resultados de todos los puntos e índices.
+#' 6. Guarda la tabla final de puntos de quiebre en un archivo CSV.
 
-## Load libraries 
+# ==============================================================================
+# 0. CONFIGURACIÓN Y LIBRERÍAS
+# ==============================================================================
 
-library(phenopix)
+# Cargar librerías necesarias
+library(greenbrown)
 library(strucchange)
+library(raster)
+library(sf)
+library(ggplot2)
+library(dplyr)
+library(lubridate)
+
+# --- Definir rutas y parámetros ---
+dir_entrada <- "resultados"
+dir_salida <- "resultados"
+
+# Nombre del archivo de entrada (generado por el script anterior)
+archivo_entrada_rds <- "series_de_tiempo_todos_indices.rds"
+
+# Nombre del archivo de salida
+archivo_salida_csv <- "puntos_de_quiebre_fenologicos.csv"
+
+# Parámetros del análisis
+indices_a_procesar <- c("NDVI", "EVI", "GNDVI", "NDMI")
+frecuencia_ts <- 365 # Frecuencia de la serie de tiempo (diaria)
+
+
+# ==============================================================================
+# 1. CARGA DE DATOS DE SERIES DE TIEMPO
+# ==============================================================================
+
+# Construir la ruta completa al archivo de entrada
+ruta_entrada <- file.path(dir_entrada, archivo_entrada_rds)
+
+# Cargar el data frame con todas las series de tiempo
+series_final_df <- readRDS(ruta_entrada)
+
+# Asegurarse de que la columna de fecha esté en el formato correcto
+series_final_df$fecha <- as.Date(series_final_df$fecha)
+
+print("Series de tiempo cargadas exitosamente.")
+
+# ==============================================================================
+# 2. PROCESAMIENTO FENOLÓGICO (BUCLE PRINCIPAL)
+# ==============================================================================
+
+# Crear una lista vacía para almacenar los resultados de los puntos de quiebre
+all_breakpoints <- list()
+
+# Bucle externo: Itera sobre cada índice de vegetación
+for (indice in indices_a_procesar) {
+  
+  print(paste("--- Procesando índice:", indice, "---"))
+  
+  # Filtrar el data frame para el índice actual
+  series_indice_df <- series_final_df %>% filter(indice == !!indice)
+  
+  # Obtener la lista de puntos únicos para el índice actual
+  unique_points <- unique(series_indice_df$Point_ID)
+  
+  # Bucle interno: Itera sobre cada punto de muestreo
+  for (point in unique_points) {
+    
+    # Envolver el análisis en un bloque tryCatch para manejar errores en puntos individuales
+    resultado_punto <- tryCatch({
+      
+      # Filtrar datos para el punto e índice actual
+      point_data <- series_indice_df %>% filter(Point_ID == point)
+      
+      # Crear el objeto de serie de tiempo (ts)
+      # Se asegura de que la serie comience en la fecha correcta
+      start_date <- min(point_data$fecha)
+      start_year <- year(start_date)
+      start_day <- yday(start_date)
+      
+      ts_data <- ts(point_data$valor, start = c(start_year, start_day), frequency = frecuencia_ts)
+      
+      # Ajustar el modelo fenológico
+      # TsPP pre-procesa la serie (ej. interpolación)
+      ts_proc <- TsPP(ts_data, ts.n = frecuencia_ts) 
+      # FitDoubleLogElmore ajusta la curva de doble logística
+      fit <- FitDoubleLogElmore(ts_proc)
+      # Phenology extrae las métricas fenológicas del ajuste
+      pheno <- Phenology(fit)
+      
+      # Detección de puntos de quiebre estructurales en la curva ajustada
+      breakpoints <- breakpoints(fit$series ~ 1)
+      bp_dates <- breakdates(breakpoints)
+      
+      # Formatear el resultado
+      data.frame(
+        Point_ID = point,
+        Indice = indice,
+        Inicio_SOS = as.character(pheno["sos"]), # Start of Season
+        Peak_POS = as.character(pheno["pos"]), # Peak of Season
+        Fin_EOS = as.character(pheno["eos"]), # End of Season
+        Breakpoints = as.character(paste(bp_dates, collapse = ", "))
+      )
+      
+    }, error = function(e) {
+      # Si ocurre un error, imprime un mensaje y retorna NULL
+      print(paste("Error procesando Point_ID:", point, "para el índice:", indice, "-", e$message))
+      return(NULL)
+    })
+    
+    # Añadir el resultado (si no es NULL) a la lista
+    if (!is.null(resultado_punto)) {
+      all_breakpoints[[length(all_breakpoints) + 1]] <- resultado_punto
+    }
+  }
+}
+
+# ==============================================================================
+# 3. CONSOLIDACIÓN Y GUARDADO DE RESULTADOS
+# ==============================================================================
+
+# Combinar todos los resultados de la lista en un único data frame
+breakpoints_df <- do.call(rbind, all_breakpoints)
+
+# Construir la ruta de salida
+ruta_salida <- file.path(dir_salida, archivo_salida_csv)
+
+# Guardar el data frame final en un archivo CSV
+write.csv(breakpoints_df, ruta_salida, row.names = FALSE)
+
+print(paste("¡Proceso completado! Los puntos de quiebre fenológicos se han guardado en:", ruta_salida))
