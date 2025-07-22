@@ -1,50 +1,139 @@
-# This script allow to obtain aleatory points in the area for each fire fuel categories (Authors: Laboratorio de Adaptación Climática y Gestión del Bosque)
+#' @title Script para Generación de Puntos de Muestreo Aleatorio
+#' @author Laboratorio de Adaptación Climática y Gestión del Bosque
+#' @date 2025-07-21
+#' @description Este script genera un conjunto de puntos de muestreo aleatorios dentro de un área de interés (AOI) definida.
+#'              Realiza un procesamiento espacial para asegurar que los datos vectoriales y raster estén en el mismo sistema de
+#'              referencia de coordenadas (CRS) y aplica una restricción de distancia mínima entre los puntos.
+#' @details
+#' Pasos del script:
+#' 1. Carga las librerías y define las rutas de entrada/salida.
+#' 2. Carga el AOI (shapefile de comunas) y un archivo raster de referencia.
+#' 3. Filtra el AOI para la comuna de interés y alinea los CRS.
+#' 4. Genera puntos aleatorios dentro del AOI.
+#' 5. Aplica un buffer de exclusión para asegurar una distancia mínima entre puntos.
+#' 6. Guarda los puntos de muestreo finales como un nuevo shapefile.
+
+# ==============================================================================
+# 0. CONFIGURACIÓN Y LIBRERÍAS
+# ==============================================================================
+
+# Cargar librerías necesarias
+# (Asegúrate de haberlas instalado con install.packages())
+library(sf)
+library(tidyverse)
+library(raster)
+
+# --- Definir rutas y parámetros ---
+# !!! ATENCIÓN: Modifica estas variables según tu estructura de proyecto !!!
+
+# Directorios (usa rutas relativas para portabilidad)
+dir_datos_vectoriales <- "datos/vectoriales"
+dir_datos_raster <- "datos/raster"
+dir_salida <- "resultados"
+
+# Nombres de archivos
+archivo_comunas_shp <- "comunas.shp"
+archivo_referencia_hdf <- "MCD64A1.A2020001.h12v12.006.2020054041728.hdf"
+
+# Parámetros de muestreo
+comuna_interes <- "Providencia"
+numero_puntos <- 100
+distancia_minima_metros <- 500 # Distancia mínima entre puntos de muestreo
+semilla_aleatoria <- 1234 # Para asegurar que los resultados sean reproducibles
+
+# Nombre del archivo de salida
+archivo_salida_shp <- paste0("puntos_muestreo_", tolower(comuna_interes), "_dist", distancia_minima_metros, "m.shp")
+
+# Crear directorio de salida si no existe
+if (!dir.exists(dir_salida)) {
+  dir.create(dir_salida, recursive = TRUE)
+}
 
 
-rm(list=ls())
-# load necessary packages
-library(terra)
-library(dplyr)
+# ==============================================================================
+# 1. CARGA DE DATOS
+# ==============================================================================
 
-getwd()
+# Construir rutas completas a los archivos
+ruta_comunas <- file.path(dir_datos_vectoriales, archivo_comunas_shp)
+ruta_raster <- file.path(dir_datos_raster, archivo_referencia_hdf)
 
-setwd(".~/set_your_work_directory")
+# Cargar el shapefile de comunas
+comunas_sf <- st_read(ruta_comunas)
 
-# Load fuel categories raster (provided by Miguel Castillo for Valparíso Region)
-uso_suelo <- rast("region_05/region_05.img")
+# Cargar solo la metadata del raster para obtener su CRS
+# (Es más eficiente que cargar el raster completo si solo necesitamos el CRS)
+raster_ref <- raster(ruta_raster, band = 1) # Usamos la primera banda como referencia
+crs_raster <- crs(raster_ref)
 
-# Extract unique categories from the raster 
-categorias <- unique(values(uso_suelo))
-categorias_unicas <- unique(categorias[, "Layer_1"])
 
-set.seed(1345) # To keep same aleatory points everty time you run the script.
+# ==============================================================================
+# 2. PROCESAMIENTO ESPACIAL
+# ==============================================================================
 
-# Create stratified points 
-puntos <- lapply(categorias_unicas, function(cat) {
-  # Filter cells for each actual category 
-  celdas <- which(values(uso_suelo) == cat)
-  
-  if (length(celdas) == 0) {
-    return(NULL)  # To skipt whether there are o not cells for a category
+# Filtrar para obtener el Área de Interés (AOI)
+aoi_sf <- comunas_sf %>%
+  filter(NOM_COMUNA == comuna_interes)
+
+# Verificar que el AOI no esté vacío
+if (nrow(aoi_sf) == 0) {
+  stop(paste("La comuna '", comuna_interes, "' no fue encontrada en el archivo de comunas.", sep = ""))
+}
+
+# Reproyectar el AOI para que coincida con el CRS del raster
+# Esto es fundamental para que todas las operaciones espaciales sean válidas
+aoi_reproyectado_sf <- st_transform(aoi_sf, crs = crs_raster)
+
+
+# ==============================================================================
+# 3. GENERACIÓN DE PUNTOS DE MUESTREO
+# ==============================================================================
+
+# Establecer la semilla para la reproducibilidad del muestreo aleatorio
+set.seed(semilla_aleatoria)
+
+# Generar un número inicial de puntos mayor al necesario, para luego filtrar
+# Esto es útil cuando se aplican restricciones espaciales
+puntos_iniciales <- st_sample(aoi_reproyectado_sf, size = numero_puntos * 5)
+
+# --- Estrategia de exclusión por distancia mínima ---
+# Este bucle asegura que ningún punto esté más cerca que la 'distancia_minima_metros'
+puntos_finales <- list()
+puntos_disponibles <- puntos_iniciales
+
+for (i in 1:numero_puntos) {
+  if (length(puntos_disponibles) == 0) {
+    warning(paste("No se pudieron generar los", numero_puntos, "puntos deseados con la distancia mínima. Se generaron", length(puntos_finales), "puntos."))
+    break
   }
   
-  # Select aleatory points into the cells 
-  n_puntos <- 10 # For this project we used ten points for each fire fuel category 
-  celdas_selec <- sample(celdas, min(n_puntos, length(celdas)))
-  coords <- xyFromCell(uso_suelo, celdas_selec)
+  # Seleccionar un punto al azar de los disponibles
+  punto_seleccionado <- st_sample(puntos_disponibles, 1)
+  puntos_finales[[i]] <- punto_seleccionado
   
-  data.frame(x = coords[, 1], y = coords[, 2], categoria = cat)
-}) 
+  # Crear un buffer de exclusión alrededor del punto seleccionado
+  buffer_exclusion <- st_buffer(punto_seleccionado, dist = distancia_minima_metros)
+  
+  # Eliminar los puntos que caen dentro del buffer de exclusión
+  puntos_disponibles <- st_difference(puntos_disponibles, buffer_exclusion)
+}
 
-# Merge all point in only one dataframe
-puntos_df <- do.call(rbind, puntos)
+# Combinar la lista de puntos finales en un solo objeto sf
+puntos_muestreo_sf <- do.call(st_union, puntos_finales) %>% st_cast("POINT") %>% st_as_sf()
 
-# Plot aleatory points obtained rasterized area 
-plot(uso_suelo)
-points(puntos_df$x, puntos_df$y, col = "red", pch = 16)
 
-# Write and save the obtained points 
+# ==============================================================================
+# 4. VISUALIZACIÓN Y GUARDADO DE RESULTADOS
+# ==============================================================================
 
-write.csv(puntos_df,"puntos_df.csv", row.names = FALSE)
+# Visualización rápida para verificar el resultado
+plot(st_geometry(aoi_reproyectado_sf), main = paste("Muestreo en", comuna_interes))
+plot(puntos_muestreo_sf, add = TRUE, col = 'red', pch = 19)
 
-### Note that this is an example for Valparaiso Region. The project include the Central South Region of Chile, so this script have to be run the mentioned area. 
+# Construir la ruta de salida completa
+ruta_salida <- file.path(dir_salida, archivo_salida_shp)
+
+# Guardar los puntos de muestreo como un shapefile
+st_write(puntos_muestreo_sf, ruta_salida, delete_layer = TRUE) # delete_layer = TRUE para sobreescribir si ya existe
+
+print(paste("¡Proceso completado! Se guardaron", nrow(puntos_muestreo_sf), "puntos de muestreo en:", ruta_salida))
