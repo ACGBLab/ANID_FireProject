@@ -4,50 +4,6 @@ Este repositorio contiene los scripts en R desarrollados para el proyecto **"Pau
 
 El objetivo de este proyecto es caracterizar el ciclo fenológico de diferentes modelos de combustible vegetal para identificar ventanas de alta vulnerabilidad a incendios y optimizar la planificación de intervenciones silvícolas preventivas.
 
----
-
-## 📋 Requisitos
-
-Para ejecutar los análisis contenidos en este repositorio, necesitarás:
-
-1.  **Software**:
-    * [**R**](https://www.r-project.org/) (versión 4.0 o superior)
-    * [**RStudio**](https://posit.co/download/rstudio-desktop/) (recomendado)
-
-2.  **Paquetes de R**:
-    Los scripts dependen de varios paquetes. Puedes instalarlos todos ejecutando el siguiente comando en tu consola de R:
-    ```R
-    install.packages(c("sf", "tidyverse", "raster", "readxl", "rgee", "greenbrown", "strucchange", "lubridate", "stringr"))
-    ```
-
-3.  **Cuenta de Google Earth Engine**:
-    El script `3_series_de_tiempo_rgee.R` requiere una cuenta de Google Earth Engine (GEE) activa. Si no tienes una, puedes registrarte [aquí](https://earthengine.google.com/signup/). La primera vez que ejecutes el script, `rgee` te guiará en el proceso de autenticación.
-
----
-
-## 📂 Estructura del Repositorio
-
-Para asegurar la reproducibilidad, se recomienda la siguiente estructura de carpetas en tu proyecto:
-
-¡Excelente idea\! Un buen archivo `README` es la carta de presentación de tu repositorio y es fundamental para que otros entiendan y puedan utilizar tu trabajo.
-
-He mejorado tu `README` para que sea más profesional, claro y completo, utilizando el formato estándar de Markdown que se usa en GitHub.
-
------
-
-### **README Mejorado**
-
-Puedes copiar y pegar el siguiente texto directamente en tu archivo `README.md` en GitHub.
-
-````markdown
-# Pautas para la Mitigación del Peligro de Incendios Forestales Basadas en la Fenología de Combustibles
-
-Este repositorio contiene los scripts en R desarrollados para el proyecto **"Pautas para la mitigación del peligro de incendios forestales basadas en la fenología y condición estacional de los combustibles. Investigación aplicada a Chile Centro-Sur"** (ANID PINC230012).
-
-El objetivo de este proyecto es caracterizar el ciclo fenológico de diferentes modelos de combustible vegetal para identificar ventanas de alta vulnerabilidad a incendios y optimizar la planificación de intervenciones silvícolas preventivas.
-
----
-
 ## 📋 Requisitos
 
 Para ejecutar los análisis contenidos en este repositorio, necesitarás:
