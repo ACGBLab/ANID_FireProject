@@ -1,7 +1,30 @@
-# This repository is part of the project "Pautas para la mitigación del peligro de incendios forestales basadas en la fenología y condición estacional de los combustibles. Investigación aplicada a Chile Centro-Sur"
-# The scripts contained works in python and R, and it is recommended to be run in RStudio
-# For the python script, it is important to obtain the Sentinel "Tile" code of the study area (e.g. for coodinate -70.82543788,-32.60725752, the tile code is "19HCE")
-# All Sentinel TILES can be obtained from the Sentinel2-grid-tiles.kml (Download from: https://hls.gsfc.nasa.gov/wp-content/uploads/2016/03/S2A_OPER_GIP_TILPAR_MPC__20151209T095117_V20150622T000000_21000101T000000_B00.kml
-# and open in Google Earth Pro software).
-# The order of use each script is the following: 1. sample_points; 2. Convert_coordinates; 3. Sentinel_ts_Valparaiso; 4. Plot_timeseries; 5. Obtain phenophases (work in progress)
-# Authors: Paula Basualto-Santana and Andrés Plaza-Aguilar
+# Pautas para la Mitigación del Peligro de Incendios Forestales Basadas en la Fenología de Combustibles
+
+Este repositorio contiene los scripts en R desarrollados para el proyecto **"Pautas para la mitigación del peligro de incendios forestales basadas en la fenología y condición estacional de los combustibles. Investigación aplicada a Chile Centro-Sur"** (ANID PINC230012).
+
+El objetivo de este proyecto es caracterizar el ciclo fenológico de diferentes modelos de combustible vegetal para identificar ventanas de alta vulnerabilidad a incendios y optimizar la planificación de intervenciones silvícolas preventivas.
+
+---
+
+## 📋 Requisitos
+
+Para ejecutar los análisis contenidos en este repositorio, necesitarás:
+
+1.  **Software**:
+    * [**R**](https://www.r-project.org/) (versión 4.0 o superior)
+    * [**RStudio**](https://posit.co/download/rstudio-desktop/) (recomendado)
+
+2.  **Paquetes de R**:
+    Los scripts dependen de varios paquetes. Puedes instalarlos todos ejecutando el siguiente comando en tu consola de R:
+    ```R
+    install.packages(c("sf", "tidyverse", "raster", "readxl", "rgee", "greenbrown", "strucchange", "lubridate", "stringr"))
+    ```
+
+3.  **Cuenta de Google Earth Engine**:
+    El script `3_series_de_tiempo_rgee.R` requiere una cuenta de Google Earth Engine (GEE) activa. Si no tienes una, puedes registrarte [aquí](https://earthengine.google.com/signup/). La primera vez que ejecutes el script, `rgee` te guiará en el proceso de autenticación.
+
+---
+
+## 📂 Estructura del Repositorio
+
+Para asegurar la reproducibilidad, se recomienda la siguiente estructura de carpetas en tu proyecto:
