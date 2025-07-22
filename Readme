@@ -28,3 +28,96 @@ Para ejecutar los análisis contenidos en este repositorio, necesitarás:
 ## 📂 Estructura del Repositorio
 
 Para asegurar la reproducibilidad, se recomienda la siguiente estructura de carpetas en tu proyecto:
+
+¡Excelente idea\! Un buen archivo `README` es la carta de presentación de tu repositorio y es fundamental para que otros entiendan y puedan utilizar tu trabajo.
+
+He mejorado tu `README` para que sea más profesional, claro y completo, utilizando el formato estándar de Markdown que se usa en GitHub.
+
+-----
+
+### **README Mejorado**
+
+Puedes copiar y pegar el siguiente texto directamente en tu archivo `README.md` en GitHub.
+
+````markdown
+# Pautas para la Mitigación del Peligro de Incendios Forestales Basadas en la Fenología de Combustibles
+
+Este repositorio contiene los scripts en R desarrollados para el proyecto **"Pautas para la mitigación del peligro de incendios forestales basadas en la fenología y condición estacional de los combustibles. Investigación aplicada a Chile Centro-Sur"** (ANID PINC230012).
+
+El objetivo de este proyecto es caracterizar el ciclo fenológico de diferentes modelos de combustible vegetal para identificar ventanas de alta vulnerabilidad a incendios y optimizar la planificación de intervenciones silvícolas preventivas.
+
+---
+
+## 📋 Requisitos
+
+Para ejecutar los análisis contenidos en este repositorio, necesitarás:
+
+1.  **Software**:
+    * [**R**](https://www.r-project.org/) (versión 4.0 o superior)
+    * [**RStudio**](https://posit.co/download/rstudio-desktop/) (recomendado)
+
+2.  **Paquetes de R**:
+    Los scripts dependen de varios paquetes. Puedes instalarlos todos ejecutando el siguiente comando en tu consola de R:
+    ```R
+    install.packages(c("sf", "tidyverse", "raster", "readxl", "rgee", "greenbrown", "strucchange", "lubridate", "stringr"))
+    ```
+
+3.  **Cuenta de Google Earth Engine**:
+    El script `3_series_de_tiempo_rgee.R` requiere una cuenta de Google Earth Engine (GEE) activa. Si no tienes una, puedes registrarte [aquí](https://earthengine.google.com/signup/). La primera vez que ejecutes el script, `rgee` te guiará en el proceso de autenticación.
+
+---
+
+## 📂 Estructura del Repositorio
+
+Para asegurar la reproducibilidad, se recomienda la siguiente estructura de carpetas en tu proyecto:
+
+````
+
+.
+├── datos/
+│   ├── entrada/       \# Archivos de entrada (ej. Puntos\_Finales.xlsx)
+│   ├── raster/        \# (Opcional si se usa GEE) Datos raster locales
+│   └── vectoriales/   \# Datos vectoriales (ej. shapefile de comunas)
+├── resultados/        \# Carpeta para guardar todos los archivos generados por los scripts
+├── scripts/           \# Carpeta para los scripts de R
+│   ├── 1\_puntos\_muestreo.R
+│   ├── 2\_convertir\_coordenadas.R
+│   ├── 3\_series\_de\_tiempo\_rgee.R
+│   └── 4\_procesamiento\_fenologico.R
+└── README.md
+
+```
+
+---
+
+##  workflow Flujo de Trabajo y Uso de Scripts
+
+Los scripts están diseñados para ser ejecutados en un orden secuencial. Cada uno realiza una tarea específica y genera los archivos de entrada para el siguiente.
+
+### **1. `1_puntos_muestreo.R`**
+* **Propósito**: Genera un conjunto de puntos de muestreo aleatorios dentro de un área de interés (ej. una comuna), asegurando una distancia mínima entre ellos para evitar la autocorrelación espacial.
+* **Entrada**: Un shapefile con los polígonos del área de interés (ej. `comunas.shp`).
+* **Salida**: Un shapefile con los puntos de muestreo generados.
+
+### **2. `2_convertir_coordenadas.R`**
+* **Propósito**: Convierte una tabla de coordenadas (ej. desde un archivo Excel) en un archivo espacial shapefile. Este script es una alternativa al paso 1 si ya se cuenta con puntos de muestreo predefinidos.
+* **Entrada**: Un archivo Excel (`.xlsx`) con columnas de Longitud y Latitud.
+* **Salida**: Un shapefile de puntos con el sistema de coordenadas proyectadas (UTM) especificado.
+
+### **3. `3_series_de_tiempo_rgee.R`**
+* **Propósito**: Extrae las series de tiempo de los índices de vegetación (NDVI, EVI, GNDVI, NDMI) para cada punto de muestreo. El proceso se realiza en la nube utilizando **Google Earth Engine**, lo que evita la necesidad de descargar y procesar imágenes satelitales localmente.
+* **Entrada**: Un archivo de puntos de muestreo (generado en el paso 1 o 2).
+* **Salida**: Archivos `.csv` y `.rds` que contienen la serie de tiempo completa para todos los puntos e índices.
+
+### **4. `4_procesamiento_fenologico.R`**
+* **Propósito**: Toma las series de tiempo generadas en el paso anterior y aplica modelos fenológicos para detectar las fechas clave del ciclo de la vegetación (Inicio, Peak, Senescencia, Final). Utiliza los paquetes `greenbrown` y `strucchange`.
+* **Entrada**: El archivo de series de tiempo (`.rds`) del script anterior.
+* **Salida**: Un archivo `.csv` con las fechas de los puntos de quiebre para cada punto e índice.
+
+---
+
+## ✍️ Autores
+
+* **Laboratorio de Adaptación Climática y Gestión del Bosque**
+
+
