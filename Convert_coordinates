@@ -1,42 +1,98 @@
-## In order to use the points to obtain time series from Sentinel 2, it is necessary covert coodinated to decimal
-# This Script allow to convert the file with UTM coordinate and write a new file with decimal degrees coodinates. 
+#' @title Script para Convertir y Reproyectar Coordenadas Geográficas
+#' @author Laboratorio de Adaptación Climática y Gestión del Bosque
+#' @date 2025-07-21
+#' @description Este script lee coordenadas geográficas (latitud, longitud) desde un archivo Excel,
+#'              las convierte en un objeto espacial (simple features), y las reproyecta
+#'              a un sistema de coordenadas proyectadas (UTM).
+#' @details
+#' Pasos del script:
+#' 1. Carga las librerías y define las rutas y parámetros de entrada/salida.
+#' 2. Lee una hoja específica de un archivo Excel que contiene las coordenadas.
+#' 3. Convierte el data frame en un objeto espacial 'sf', asumiendo un CRS inicial WGS84.
+#' 4. Reproyecta los puntos al sistema de coordenadas UTM deseado.
+#' 5. Guarda el nuevo objeto espacial como un archivo shapefile.
 
+# ==============================================================================
+# 0. CONFIGURACIÓN Y LIBRERÍAS
+# ==============================================================================
 
-# Load library
-
+# Cargar librerías necesarias
+# (Asegúrate de haberlas instalado con install.packages(c("sf", "readxl")))
 library(sf)
+library(readxl)
+library(tidyverse) # Cargado para un manejo de datos consistente
 
-# Load UTM coordinates data
-file_path <- "puntos_df.csv"
-utm_data <- read.csv(file_path)
+# --- Definir rutas y parámetros ---
+# !!! ATENCIÓN: Modifica estas variables según tu estructura de proyecto !!!
 
-# Inspect the coodinates data
-head(utm_data)
-colnames(utm_data) <- c("Easting","Northing", "Cat")
-names(utm_data)
-# We assume that the file contain columns called 'Easting' and 'Northing', and we know the UTM zone and the hemisphere
+# Directorios
+dir_entrada <- "datos/entrada"
+dir_salida <- "resultados"
 
-# Replace 'zone_number' with the appropiate UTM zone and set the hemisphere (South or North)
-zone_number <- 19  
-hemisphere <- "south" 
+# Nombres de archivos
+archivo_entrada_xlsx <- "Puntos_Finales.xlsx"
+nombre_hoja_excel <- "Puntos"
+archivo_salida_shp <- "Puntos_Finales_UTM.shp"
 
-# Convert UTM coordinate to sf object
-utm_crs <- paste0("+proj=utm +zone=", zone_number, " +datum=WGS84 +", ifelse(hemisphere == "north", "north", "south"))
-utm_sf <- st_as_sf(utm_data, coords = c("Easting", "Northing"), crs = utm_crs)
+# Parámetros de conversión
+columna_longitud <- "Longitud"
+columna_latitud <- "Latitud"
+crs_inicial_epsg <- 4326  # WGS84, el estándar para coordenadas geográficas (lat/lon)
+crs_final_epsg <- 32719 # SIRGAS 2000 / UTM zone 19S, común para Chile Central
 
-# Convert to WGS84 (decimal degrees)
-wgs84_sf <- st_transform(utm_sf, crs = 4326)
-
-# Extraer las coordenadas en grados decimales
-decimal_coords <- st_coordinates(wgs84_sf)
-utm_data$Longitude <- decimal_coords[, 1]
-utm_data$Latitude <- decimal_coords[, 2]
-
-# Save and update data with decimal degree coordinates
-
-output_file <- "converted_coordinates.csv"
-View(output_file)
-write.csv(utm_data, output_file, row.names = FALSE)
+# Crear directorio de salida si no existe
+if (!dir.exists(dir_salida)) {
+  dir.create(dir_salida, recursive = TRUE)
+}
 
 
+# ==============================================================================
+# 1. CARGA DE DATOS
+# ==============================================================================
 
+# Construir la ruta completa al archivo de entrada
+ruta_entrada <- file.path(dir_entrada, archivo_entrada_xlsx)
+
+# Leer los datos del archivo Excel
+puntos_df <- read_excel(ruta_entrada, sheet = nombre_hoja_excel)
+
+print("Datos cargados exitosamente desde el archivo Excel:")
+print(head(puntos_df))
+
+
+# ==============================================================================
+# 2. CONVERSIÓN A OBJETO ESPACIAL (SF)
+# ==============================================================================
+
+# Convertir el data frame a un objeto espacial 'sf'
+# Se especifican las columnas de coordenadas y el sistema de referencia inicial
+puntos_sf <- st_as_sf(puntos_df, 
+                        coords = c(columna_longitud, columna_latitud), 
+                        crs = crs_inicial_epsg)
+
+print("Datos convertidos a objeto espacial (sf) con CRS inicial WGS84:")
+print(puntos_sf)
+
+
+# ==============================================================================
+# 3. REPROYECCIÓN DE COORDENADAS
+# ==============================================================================
+
+# Reproyectar los puntos al sistema de coordenadas de destino (UTM)
+puntos_utm_sf <- st_transform(puntos_sf, crs = crs_final_epsg)
+
+print(paste("Puntos reproyectados exitosamente a UTM Zona 19S (EPSG:", crs_final_epsg, "):"))
+print(puntos_utm_sf)
+
+
+# ==============================================================================
+# 4. GUARDADO DE RESULTADOS
+# ==============================================================================
+
+# Construir la ruta de salida completa
+ruta_salida <- file.path(dir_salida, archivo_salida_shp)
+
+# Guardar los puntos reproyectados como un nuevo shapefile
+st_write(puntos_utm_sf, ruta_salida, delete_layer = TRUE) # delete_layer = TRUE para sobreescribir
+
+print(paste("¡Proceso completado! El shapefile reproyectado se ha guardado en:", ruta_salida))
